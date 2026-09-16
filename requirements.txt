@@ -1,0 +1,24 @@
+# Installed 2026-09-16 - Python 3.10, torch cu121, RTX 3050 4GB
+# Install with:
+# .\venv\Scripts\pip.exe install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# .\venv\Scripts\pip.exe install -r requirements.txt
+
+# Core
+numpy
+pandas
+matplotlib
+tqdm
+pyyaml
+
+# ML
+scikit-learn
+scipy
+
+# Deep Learning - CUDA 12.1 build (see above for torch)
+transformers
+datasets
+tokenizers
+accelerate
+evaluate
+safetensors
+huggingface-hub
