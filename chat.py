@@ -10,7 +10,7 @@ import torch
 from pathlib import Path
 from transformers import AutoTokenizer, GPT2LMHeadModel
 
-MODEL_DIR = "./Ex-friend"
+MODEL_DIR = "./ANIME-FRIEND"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 LOG_FILE = Path("data/mychat.txt")  # every chat is saved here for future training
 LOG_FILE.parent.mkdir(exist_ok=True)

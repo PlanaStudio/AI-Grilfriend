@@ -14,7 +14,7 @@ from transformers import GPT2Config, GPT2LMHeadModel, AutoTokenizer, Trainer, Tr
 from datasets import load_dataset
 
 BASE_TOKENIZER = "distilgpt2"  # tokenizer source (GPT-3-style BPE)
-NEW_MODEL_DIR = "./Ex-friend"  # local output folder, NOT a HuggingFace repo id
+NEW_MODEL_DIR = "./ANIME-FRIEND"  # local output folder, NOT a HuggingFace repo id
 DATA_FILES = [  # ALL training data: your LINE chat + downloaded dialog corpora
     "data/english_only.txt",
     "data/chat_pixelsandpointers_better_daily_dialog.txt",
@@ -52,7 +52,7 @@ def main():
     collator = DataCollatorForLanguageModeling(tok, mlm=False)
 
     # False = fine-tune pretrained distilgpt2 (keeps grammar). True = random 30M init.
-    # Never use from_pretrained("Ex-friend") here - that looks on HuggingFace Hub.
+    # Never use from_pretrained("ANIME-FRIEND") here - that looks on HuggingFace Hub.
     if FROM_SCRATCH:
         config = GPT2Config(
             vocab_size=tok.vocab_size,
