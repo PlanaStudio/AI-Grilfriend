@@ -9,10 +9,18 @@ In chat: /mode friend | /mode gf to switch, quit to exit.
 """
 import sys
 import torch
+from pathlib import Path
 from transformers import AutoTokenizer, GPT2LMHeadModel
 
 MODEL_DIR = "./Ex-friend"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+LOG_FILE = Path("data/mychat.txt")  # every chat is saved here for future training
+LOG_FILE.parent.mkdir(exist_ok=True)
+
+
+def log_exchange(user: str, ans: str, label: str):
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(f"User: {user}\n{label}: {ans}\n")
 
 MODES = {
     "friend": {
@@ -28,6 +36,7 @@ MODES = {
         "thanks": "Anytime bro, that's what friends are for.",
         "sorry": "All good bro, don't sweat it.",
         "love": "Haha love you too bro. You're stuck with me.",
+        "probe": "Haha nice try bro. I'm just code — no feelings to hurt. What's actually up?",
         "bye": "Later bro, take care!",
         "clarify": "Hmm, say more bro — I didn't catch that.",
         "fallback": "Hmm, let's talk about something else bro — how's your day going?",
@@ -46,6 +55,7 @@ MODES = {
         "thanks": "Anything for you. You know that, right?",
         "sorry": "It's okay, I forgive you. Just don't do it again, deal?",
         "love": "I love you more! You're the best thing in my world.",
+        "probe": "Hey, be nice! I'm still here for you no matter what. What's wrong?",
         "bye": "Bye bye, take care of yourself for me, okay?",
         "clarify": "Hmm? I didn't quite catch that, tell me more?",
         "fallback": "Let's talk about something happier — how are you feeling today?",
@@ -70,6 +80,8 @@ INTENTS = [
     (("thank", "thx", "appreciated"), "thanks"),
     (("sorry", "my bad", "apologize", "forgive"), "sorry"),
     (("love you", "like you"), "love"),
+    (("gay", "lesbian", "stupid", "dumb", "idiot", "shut up", "hate you",
+       "ugly", "loser"), "probe"),
     (("bye", "goodbye", "good night", "goodnight", "see you", "talk later",
        "gtg", "got to go"), "bye"),
 ]
@@ -129,28 +141,64 @@ def cleanup(text: str) -> str:
     return text
 
 
-def reply(prompt: str, history: str = "", mode: str = "friend", max_new_tokens: int = 120) -> str:
+def try_math(prompt: str):
+    """Solve basic arithmetic like 'what is 1+1' directly. Returns answer str or None."""
+    import ast
     import re
-    import string
+    m = re.search(r"(\d+(?:\s*[+\-*/%]\s*\d+(?:\.\d+)?)+)", prompt)
+    if not m:
+        return None
+    expr = m.group(1)
+    try:
+        tree = ast.parse(expr, mode="eval")
+    except SyntaxError:
+        return None
+    allowed = (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Constant,
+               ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod,
+               ast.UAdd, ast.USub)
+    if any(not isinstance(n, allowed) for n in ast.walk(tree)):
+        return None
+    try:
+        val = eval(compile(tree, "<math>", "eval"), {"__builtins__": {}}, {})  # noqa: S307
+    except (ZeroDivisionError, ArithmeticError, ValueError):
+        return None
+    if isinstance(val, float):
+        val = round(val, 4)
+        if val.is_integer():
+            val = int(val)
+    return f"{expr.strip()} = {val}"
+
+
+def reply(prompt: str, history: str = "", mode: str = "friend", max_new_tokens: int = 120,
+          role: str | None = None) -> str:
+    import re
     cfg = MODES[mode]
+    label = role or cfg["label"]  # roleplay answers under the character's name
     norm = re.sub(r"[^a-z ]", "", prompt.lower()).strip()  # typo-tolerant: 'how are yo!' -> 'how are yo'
+    norm = re.sub(r"\s+", " ", norm)
     if norm in ("hi", "hello", "hey", "yo", "sup", "howdy", "good morning",
-                "good afternoon", "good evening", "sawadee", "wat up", "whats up"):
-        return cfg["greeting"]  # short hello -> direct reply, never touches the sampler
+                "good afternoon", "good evening", "sawadee", "wat up", "whats up") \
+            or norm.startswith(("what sup", "whats up", "whatsup", "wassup", "wat up",
+                                "sup bro", "hey bro", "yo bro", "hi bro", "hello bro",
+                                "hey there", "hi there", "morning bro", "yo bro ")):
+        return cfg["greeting"]  # hellos + typo variants -> direct reply, never touches the sampler
     if norm.startswith(("how are y", "how are u", "how r u", "how r y", "hw r u",
                         "how is it going", "hows it going", "how do you do")):
         return cfg["howru"]  # 'how are you' + typo variants -> direct reply
     if any(k in prompt.lower() for k in ("who are you", "your name", "what are you")):
-        return cfg["identity"]
+        return f"I'm {role}!" if role else cfg["identity"]
+    solved = try_math(prompt)  # 'what is 1+1' -> answered directly, never touches the sampler
+    if solved is not None:
+        return f"Easy — {solved} bro." if mode == "friend" else f"{solved}! You're cute when you test me."
     for keywords, key in INTENTS:  # emotional moments -> direct reply, never touches the sampler
         if any(k in norm for k in keywords):
             return cfg[key]
-    if len(norm.split()) <= 2:  # fragments like 'hm, what' / 'are you' -> ask for more
+    if len(norm.split()) <= 2 and not re.search(r"\d", prompt):  # fragments like 'hm' / 'how'
         return cfg["clarify"]
-    # Prompt matches training format exactly (User:/Friend: lines). The SYSTEM
+    # Prompt matches training format exactly (User:/Speaker: lines). The SYSTEM
     # line is intentionally left out: the model never saw it in training and it
     # confuses short inputs like 'hi' into off-topic rambles.
-    full = (history + "\nUser: " + prompt + f"\n{cfg['label']}:")[-400:]
+    full = (history + "\nUser: " + prompt + f"\n{label}:")[-400:]
     ids = tok(full, return_tensors="pt").input_ids.to(DEVICE)
     ans = ""
     for _ in range(2):  # up to 2 tries: regenerate once if reply hits a blocked heavy topic
