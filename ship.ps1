@@ -34,9 +34,25 @@ if ($big.Count -gt 0) {
 }
 
 if ([string]::IsNullOrWhiteSpace($Message)) {
-    $names = ($staged | Split-Path -Leaf) | Select-Object -Unique | Select-Object -First 3
-    $more = if ($staged.Count -gt 3) { " (+$($staged.Count - 3) more)" } else { "" }
-    $Message = "Update $($names -join ', ')$more — $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+    # Content-aware message: per-file +added/-deleted lines plus added def/class names
+    $addedFiles = @(git diff --cached --diff-filter=A --name-only | Where-Object { $_ -ne "" })
+    $deletedFiles = @(git diff --cached --diff-filter=D --name-only | Where-Object { $_ -ne "" })
+    $numstat = @(git diff --cached --numstat | Where-Object { $_ -ne "" })
+    $syms = @(git diff --cached -U0 -- '*.py' |
+        Where-Object { $_ -match '^\+(def |class )' } |
+        ForEach-Object { ($_ -replace '^\+(def |class )', '') -replace '[(:].*', '' } |
+        Select-Object -Unique | Select-Object -First 4)
+    $bits = @()
+    foreach ($f in ($addedFiles | Split-Path -Leaf)) { $bits += "new $f" }
+    foreach ($line in $numstat) {
+        $a, $d, $f = ($line -split "`t")
+        if (($addedFiles -contains $f) -or ($deletedFiles -contains $f)) { continue }
+        $bits += "$(Split-Path $f -Leaf) +$a/-$d"
+    }
+    foreach ($f in ($deletedFiles | Split-Path -Leaf)) { $bits += "drop $f" }
+    $Message = $bits -join "; "
+    if ($syms.Count -gt 0) { $Message += " ($($syms -join ', '))" }
+    if ($Message.Length -gt 160) { $Message = $Message.Substring(0, 157) + "..." }
 }
 
 git commit -m $Message
