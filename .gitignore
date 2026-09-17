@@ -2,13 +2,17 @@ venv/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+data/
 checkpoints/
 checkpoints-gpt/
+Ex-friend/
 runs/
 # model weights & optimizer states (too large for GitHub, retrain via train_gpt.py)
 *.safetensors
 *.pt
 *.bin
 # raw chat exports (private)
-/data/thai_only.txt
-/data/english_only.txt
+[LINE]*.txt
+thai_only.txt
+english_only.txt
+data/mychat.txt
