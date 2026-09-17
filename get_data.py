@@ -1,4 +1,4 @@
-"""Download conversation datasets from Hugging Face Hub for Ex-friend training.
+"""Download conversation datasets from Hugging Face Hub for ANIME-FRIEND training.
 Usage:
     .\\venv\\Scripts\\python.exe get_data.py list                        # show recommended chat datasets
     .\\venv\\Scripts\\python.exe get_data.py search <keyword>            # search Hub, e.g. 'dailydialog'

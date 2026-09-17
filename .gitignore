@@ -5,7 +5,7 @@ __pycache__/
 data/
 checkpoints/
 checkpoints-gpt/
-Ex-friend/
+ANIME-FRIEND/
 runs/
 # model weights & optimizer states (too large for GitHub, retrain via train_gpt.py)
 *.safetensors

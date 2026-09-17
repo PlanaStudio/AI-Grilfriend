@@ -42,7 +42,7 @@ Edit `DATA_FILES` / `EPOCHS` at the top of `train_gpt.py`, then:
 - `FROM_SCRATCH = False` (default): fine-tune `distilgpt2` — keeps English grammar.
   `True` builds a 30M model from random weights (needs lots of data).
 - Junk link/ID lines (`http`, `tiktok`, `.com`) are filtered automatically.
-- Saves to `./Ex-friend/` (weights excluded from git — too large for GitHub, retrain to rebuild).
+- Saves to `./ANIME-FRIEND/` (weights excluded from git — too large for GitHub, retrain to rebuild).
 
 ## Chat
 
