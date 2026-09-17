@@ -15,4 +15,4 @@ runs/
 [LINE]*.txt
 thai_only.txt
 english_only.txt
-data/mychat.txt
+/data/mychat.txt
