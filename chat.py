@@ -215,7 +215,7 @@ def reply(prompt: str, history: str = "", mode: str = "friend", max_new_tokens: 
                 pad_token_id=tok.eos_token_id,
             )
         text = tok.decode(out[0], skip_special_tokens=True)
-        ans = cleanup(text.split(f"{cfg['label']}:")[-1].strip())
+        ans = cleanup(text.split(f"{label}:")[-1].strip())
         if not any(b in ans.lower() for b in BLOCKED):
             break
         ans = ""
@@ -225,11 +225,16 @@ def reply(prompt: str, history: str = "", mode: str = "friend", max_new_tokens: 
 def main():
     mode, max_tokens, msg = parse_args(sys.argv[1:])
     if msg:  # single-prompt test mode
-        print(reply(msg, mode=mode, max_new_tokens=max_tokens))
+        ans = reply(msg, mode=mode, max_new_tokens=max_tokens)
+        print(ans)
+        log_exchange(msg, ans, "Friend")  # training format uses Friend:, not Girlfriend:
+        print(f"(saved to {LOG_FILE})")
         return
 
-    print(f"Chat with Ex-friend [{mode}] (/mode friend|gf to switch, quit to exit)")
+    print(f"Chat with Ex-friend [{mode}] (/mode friend|gf, /role <name>|off, quit to exit)")
+    print(f"Chats auto-save to {LOG_FILE} -> rerun train_gpt.py to learn from them.")
     history = ""
+    role = None
     while True:
         try:
             user = input("You: ").strip()
@@ -246,12 +251,24 @@ def main():
             else:
                 print("-- usage: /mode friend|gf --")
             continue
+        if user.startswith("/role"):
+            parts = user.split(maxsplit=1)
+            if len(parts) == 1 or parts[1].lower() == "off":
+                role = None
+                history = ""
+                print("-- roleplay off --")
+            else:
+                role = parts[1].strip()[:30]
+                history = ""
+                print(f"-- roleplaying as {role} --")
+            continue
         if not user:
             continue
-        cfg = MODES[mode]
-        ans = reply(user, history, mode, max_new_tokens=max_tokens)
-        print(f"{cfg['label']}: {ans}")
-        history = (history + f"\nUser: {user}\n{cfg['label']}: {ans}")[-800:]
+        label = role or MODES[mode]["label"]
+        ans = reply(user, history, mode, max_new_tokens=max_tokens, role=role)
+        print(f"{label}: {ans}")
+        log_exchange(user, ans, role or "Friend")  # training format uses Friend:
+        history = (history + f"\nUser: {user}\n{label}: {ans}")[-800:]
 
 
 if __name__ == "__main__":

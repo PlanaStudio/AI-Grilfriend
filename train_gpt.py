@@ -9,6 +9,7 @@ Requires CUDA PyTorch build (already installed: torch 2.5.1+cu121).
 CPU works but is ~10-50x slower for Transformers.
 """
 import torch
+from pathlib import Path
 from transformers import GPT2Config, GPT2LMHeadModel, AutoTokenizer, Trainer, TrainingArguments, DataCollatorForLanguageModeling
 from datasets import load_dataset
 
@@ -19,7 +20,9 @@ DATA_FILES = [  # ALL training data: your LINE chat + downloaded dialog corpora
     "data/chat_pixelsandpointers_better_daily_dialog.txt",
     "data/chat_pixelsandpointers_empathetic_dialogues_for_lm.txt",
     "data/chat_nadil-dulnidu_ai-girlfriend-chat-dataset.txt",
+    "data/mychat.txt",  # your own chats, auto-saved by chat.py (skipped if missing)
 ]
+DATA_FILES = [f for f in DATA_FILES if Path(f).exists()]
 EPOCHS = 3
 FROM_SCRATCH = False  # False = fine-tune pretrained (keeps English grammar). True = random init (gibberish on tiny data).
 JUNK = ("http", "tiktok", ".com", "www.")  # drop link/ID salad lines that teach gibberish
